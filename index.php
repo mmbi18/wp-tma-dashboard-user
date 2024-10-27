@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: داشبورد کاربر تیما
-Description: پلاگینی برای ایجاد پنل کاربری با منوهای سفارشی که مدیر می‌تواند آنها را بسازد و تنظیم کند.[tmaudasbourd_dashboard]
+Description: پلاگینی برای ایجاد پنل کاربری با منوهای سفارشی که مدیر می‌تواند آنها را بسازد و تنظیم کند.[tmaudasbourd_dashboard] [tmaudasbourd_dashboardid]
 Version: 1.0
 Author: mohammad bagheri
 Plugin URI: https://t-ma.ir
@@ -14,7 +14,6 @@ function tmaudasbourd_enqueue_assets() {
     wp_enqueue_script('tmaudasbourd-script', plugin_dir_url(__FILE__) . 'script.js?v50089', array('jquery'), null, true);
     wp_localize_script('tmaudasbourd-script', 'tmaudasbourd_ajax', array('ajax_url' => admin_url('admin-ajax.php')));
 }
-add_action('wp_enqueue_scripts', 'tmaudasbourd_enqueue_assets');
 
 // Add admin menu
 function tmaudasbourd_add_admin_menu() {
@@ -25,8 +24,8 @@ add_action('admin_menu', 'tmaudasbourd_add_admin_menu');
 // Register settings
 function tmaudasbourd_register_settings() {
     register_setting('tmaudasbourd_settings_group', 'tmaudasbourd_menu_items');
-    add_settings_section('tmaudasbourd_settings_section', 'تنظیمات منو', null, 'tmaudasbourd_settings');
-    add_settings_field('tmaudasbourd_menu_items', 'آیتم‌های منو', 'tmaudasbourd_menu_items_callback', 'tmaudasbourd_settings', 'tmaudasbourd_settings_section');
+    add_settings_section('tmaudasbourd_settings_section', 'تنظیمات منو / tools', null, 'tmaudasbourd_settings');
+    add_settings_field('tmaudasbourd_menu_items', 'آیتم‌های منو/menu', 'tmaudasbourd_menu_items_callback', 'tmaudasbourd_settings', 'tmaudasbourd_settings_section');
 }
 add_action('admin_init', 'tmaudasbourd_register_settings');
 
@@ -47,7 +46,9 @@ function tmaudasbourd_menu_items_callback() {
             </div>
         <?php endforeach; ?>
     </div>
-    <button type="button" class="button button-primary" id="tmaudasbourd-add-menu-item">افزودن آیتم منو</button>
+    <button type="button" class="button button-primary" id="tmaudasbourd-add-menu-item">افزودن آیتم منو
+    Add menu
+    </button>
     <?php
 }
 
@@ -73,12 +74,23 @@ function tmaudasbourd_settings_page() {
 // Frontend dashboard HTML
 function tmaudasbourd_user_dashboard() {
     if (!is_user_logged_in()) {
-        return '<p>لطفا وارد شوید تا به داشبورد خود دسترسی پیدا کنید.</p>';
+        return '<p>چند لحظه منتظر بمانید.</p> 
+        <script>
+function myFunction() {
+number=Math.floor(Math.random() * 1000) + 1;
+  location.replace("?login=true&" + number)
+}
+myFunction();
+</script>
+<button onclick="myFunction()">ورود</button>
+
+        ';
     }
 
     $menu_items = get_option('tmaudasbourd_menu_items', array());
     ob_start();
-    
+    add_action('wp_enqueue_scripts', 'tmaudasbourd_enqueue_assets');
+
     wp_enqueue_style('tmaudasbourd-style', plugin_dir_url(__FILE__) . 'style.css?v50089');
     wp_enqueue_script('tmaudasbourd-script', plugin_dir_url(__FILE__) . 'script.js?v50089', array('jquery'), null, true);
     ?>
@@ -119,3 +131,56 @@ function tmaudasbourd_load_content() {
     wp_die();
 }
 add_action('wp_ajax_tmaudasbourd_load_content', 'tmaudasbourd_load_content');
+//***************************************************************************
+
+// Shortcode to display content based on menu ID
+function tmaudasbourd_display_content_by_id() {
+    if (!is_user_logged_in()) {
+        return '<p>چند لحظه منتظر بمانید.</p> 
+        <script>
+        function myFunction() {
+            number = Math.floor(Math.random() * 1000) + 1;
+            location.replace("?login=true&" + number);
+        }
+        myFunction();
+        </script>
+        <button onclick="myFunction()">ورود</button>';
+    }
+
+    $menu_items = get_option('tmaudasbourd_menu_items', array());
+    $menu_id = isset($_GET['menu_id']) ? sanitize_text_field($_GET['menu_id']) : '';
+  wp_enqueue_style('tmaudasbourd-style', plugin_dir_url(__FILE__) . 'style.css?v50089');
+    wp_enqueue_script('tmaudasbourd-script', plugin_dir_url(__FILE__) . 'script2.js?v50089', array('jquery'), null, true);
+  
+    ob_start();
+    ?>
+    <div class="tmaudasbourd-dashboard">
+        <div class="tmaudasbourd-menu">
+            <div class="tmaudasbourd-profile">
+                <?php echo get_avatar(get_current_user_id(), 96); ?>
+                <h2><?php echo wp_get_current_user()->display_name; ?></h2>
+            </div>
+            <?php foreach ($menu_items as $index => $item) : ?>
+                <div class="tmaudasbourd-menu-item">
+                    <span class="dashicons <?php echo esc_attr($item['icon']); ?>"></span>
+                    <a href="?menu_id=<?php echo $index; ?>" class="tmaudasbourd-menu-link"><?php echo esc_html($item['title']); ?></a>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <div class="tmaudasbourd-content">
+            <?php
+            if ($menu_id !== '' && isset($menu_items[$menu_id])) {
+                echo  do_shortcode(  $menu_items[$menu_id]['content']  );
+            } else {
+                //echo '<p>محتوایی یافت نشد.</p>';
+            echo  do_shortcode(  $menu_items[0]['content']  );
+                
+            }
+            ?>
+        </div>
+    </div>
+    <div class="tmaudasbourd-toggle-menu">☰</div>
+    <?php
+    return ob_get_clean();
+}
+add_shortcode('tmaudasbourd_dashboardid', 'tmaudasbourd_display_content_by_id');
